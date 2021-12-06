@@ -1,0 +1,150 @@
+-------------------------------------------------------------------------------- live stream (v1, indirect):
+
+https://www.nbcnews.com/now
+  <script type="application/ld+json">
+    {
+      "name": "NBC News NOW | NBC News",
+      "description": "NBC News NOW is an online streaming network from NBC News where users can find the latest stories and breaking news on world news and US news.",
+      "embedUrl": "https://www.nbcnews.com/playmaker/embed/2007524",
+      "publication": [{
+        "isLiveBroadcast": true,
+      }]
+    }
+  </script>
+
+https://stream.nbcsports.com/data/event_config_2007524.json
+  {
+    "eventConfig": {
+      "dataSources": [
+        {
+          "name": "vodSources",
+          "url": "https://stream.nbcnews.com/data/vod_sources_2007524.json",
+          "updateInterval": "00:05:00"
+        },
+        {
+          "name": "liveSources",
+          "url": "https://stream.nbcnews.com/data/live_sources_2007524.json",
+          "updateInterval": "00:02:30"
+        }
+      ]
+    }
+  }
+
+https://stream.nbcnews.com/data/live_sources_2007524.json
+  {
+    "videoSources": [
+      {
+        "name": "NBC News Now",
+        "description": "NBC News Now",
+        "type": "live",
+        "contentProtection": false,
+        "cdnSources": {
+          "primary": [
+            {
+              "url": "https://nbcnews3.akamaized.net/hls/live/723429/NBCNewsNowa418c506/clear/master.m3u8",
+              "cbcsUrl": "",
+              "ctrUrl": "",
+              "dashUrl": "",
+              "dashCbcsUrl": "",
+              "dashCtrUrl": "",
+              "cdn": "akamai",
+              "type": "primary",
+              "weight": "100"
+            }
+          ]
+        },
+        "sourceDrm": [
+          {
+            "drmConfig": [
+              {
+                "type": "none",
+                "primaryUrl": "",
+                "alternateUrl": ""
+              }
+            ]
+          }
+        ],
+        "sourceUrl":    "https://nbcnews3.akamaized.net/hls/live/723429/NBCNewsNowa418c506/clear/master.m3u8",
+        "sourceUrlAlt": "https://nbcnews3.akamaized.net/hls/live/723429/NBCNewsNowa418c506/clear/master.m3u8",
+        "hlsv4Url":     "https://nbcnews3.akamaized.net/hls/live/723429/NBCNewsNowa418c506/clear/master.m3u8",
+        "hlsv4UrlAlt":  "https://nbcnews3.akamaized.net/hls/live/723429/NBCNewsNowa418c506/clear/master.m3u8",
+        "ottStreamUrl": "https://nbcnews3.akamaized.net/hls/live/723429/NBCNewsNowa418c506/clear/master.m3u8",
+        "sourceURLComcast": "",
+        "hdsStreamUrl": "",
+        "isporiginUrl": "",
+        "gbooleUrl": "",
+        "gbooleUrlAlt": "",
+        "msl4sourceUrl": "",
+      }
+    ]
+  }
+
+-------------------------------------------------------------------------------- live stream (v2, direct):
+
+https://www.nbcnews.com/now
+  <script type="application/ld+json">
+    {
+      "name": "NBC News NOW | NBC News",
+      "description": "NBC News NOW is an online streaming network from NBC News where users can find the latest stories and breaking news on world news and US news.",
+      "embedUrl": "https://www.nbcnews.com/playmaker/embed/2007524",
+      "publication": [{
+        "isLiveBroadcast": true,
+      }]
+    }
+  </script>
+
+https://api-leap.nbcsports.com/feeds/assets/2007524?application=NBCNews&format=nbc-player&platform=desktop
+  {
+    "pid": "2007524",
+    "eventStatus": "live",
+    "dataSources": [{
+      "name": "vodSources",
+      "url": "https://stream.nbcnews.com/data/vod_sources_2007524.json",
+      "updateInterval": "00:05:00"
+    }, {
+      "name": "liveSources",
+      "url": "https://stream.nbcnews.com/data/live_sources_2007524.json",
+      "updateInterval": "00:02:30"
+    }],
+    "description": "NBC News NOW",
+    "videoSources": [{
+      "name": "NBC News Now",
+      "description": "NBC News Now",
+      "type": "live",
+      "cdnSources": {
+        "primary": [{
+          "cbcsUrl": "",
+          "ctrUrl": "",
+          "dashUrl": "",
+          "dashCbcsUrl": "",
+          "dashCtrUrl": "",
+          "cdn": "akamai",
+          "type": "primary",
+          "weight": 100,
+          "sourceUrl": "https://nbcnews3.akamaized.net/hls/live/723429/NBCNewsNowa418c506/clear/master.m3u8",
+          "contentProtection": false
+        }],
+        "backup": [{
+          "cbcsUrl": "",
+          "ctrUrl": "",
+          "dashUrl": "",
+          "dashCbcsUrl": "",
+          "dashCtrUrl": "",
+          "cdn": "",
+          "type": "",
+          "weight": 0,
+          "sourceUrl": "",
+          "contentProtection": false
+        }]
+      },
+      "sourceDrm": [{
+        "drmConfig": [{
+          "type": "none",
+          "primaryUrl": "",
+          "alternateUrl": ""
+        }]
+      }],
+    }],
+  }
+
+--------------------------------------------------------------------------------
