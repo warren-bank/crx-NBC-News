@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NBC News
 // @description  Watch videos in external player.
-// @version      1.0.2
+// @version      1.0.3
 // @match        *://nbcnews.com/*
 // @match        *://*.nbcnews.com/*
 // @icon         https://nodeassets.nbcnews.com/cdnassets/projects/ramen/favicon/nbcnews/all-other-sizes-PNG.ico/favicon-32x32.png
@@ -319,7 +319,16 @@ var download_text = function(url, headers, data, callback) {
     if (!headers['content-type'])
       headers['content-type'] = 'application/x-www-form-urlencoded'
 
-    data = serialize_xhr_body_object(data)
+    switch(headers['content-type'].toLowerCase()) {
+      case 'application/json':
+        data = JSON.stringify(data)
+        break
+
+      case 'application/x-www-form-urlencoded':
+      default:
+        data = serialize_xhr_body_object(data)
+        break
+    }
   }
 
   var xhr    = new unsafeWindow.XMLHttpRequest()
@@ -352,12 +361,12 @@ var download_text = function(url, headers, data, callback) {
 }
 
 var download_json = function(url, headers, data, callback) {
-  download_text(url, headers, data, function(text){
-    if (!headers)
-      headers = {}
-    if (!headers.accept)
-      headers.accept = 'application/json'
+  if (!headers)
+    headers = {}
+  if (!headers.accept)
+    headers.accept = 'application/json'
 
+  download_text(url, headers, data, function(text){
     try {
       callback(JSON.parse(text))
     }
@@ -367,60 +376,51 @@ var download_json = function(url, headers, data, callback) {
 
 // -----------------------------------------------------------------------------
 
-var download_live_video_data = function(pid, callback) {
-  var url, headers, data, xhr_callback
+var process_live_video_data = function(json) {
   var video_source, cdn_sources, cdn_source, drm_source, drm_config, video_data
 
-  url     = 'https://api-leap.nbcsports.com/feeds/assets/' + pid + '?application=NBCNews&format=nbc-player&platform=desktop'
-  headers = null
-  data    = null
+  try {
+    if ((json instanceof Object) && Array.isArray(json.videoSources) && json.videoSources.length) {
+      for (var i1=0; i1 < json.videoSources.length; i1++) {
+        video_source = json.videoSources[i1]
 
-  xhr_callback = function(json) {
-    try {
-      if ((json instanceof Object) && Array.isArray(json.videoSources) && json.videoSources.length) {
-        for (var i1=0; i1 < json.videoSources.length; i1++) {
-          video_source = json.videoSources[i1]
+        if ((video_source instanceof Object) && (video_source.cdnSources instanceof Object)) {
+          cdn_sources = Object.keys(video_source.cdnSources)
 
-          if ((video_source instanceof Object) && (video_source.cdnSources instanceof Object)) {
-            cdn_sources = Object.keys(video_source.cdnSources)
+          for (var i2=0; i2 < cdn_sources.length; i2++) {
+            if (Array.isArray(video_source.cdnSources[cdn_sources[i2]])) {
+              for (var i3=0; i3 < video_source.cdnSources[cdn_sources[i2]].length; i3++) {
+                cdn_source = video_source.cdnSources[cdn_sources[i2]][i3]
 
-            for (var i2=0; i2 < cdn_sources.length; i2++) {
-              if (Array.isArray(video_source.cdnSources[cdn_sources[i2]])) {
-                for (var i3=0; i3 < video_source.cdnSources[cdn_sources[i2]].length; i3++) {
-                  cdn_source = video_source.cdnSources[cdn_sources[i2]][i3]
+                if ((cdn_source instanceof Object) && cdn_source.sourceUrl) {
+                  video_data = {
+                    video_url:  cdn_source.sourceUrl,
+                    video_type: 'application/x-mpegurl'
+                  }
 
-                  if ((cdn_source instanceof Object) && cdn_source.sourceUrl) {
-                    video_data = {
-                      video_url:  cdn_source.sourceUrl,
-                      video_type: 'application/x-mpegurl'
-                    }
+                  if (cdn_source.contentProtection && Array.isArray(video_source.sourceDrm) && video_source.sourceDrm.length) {
+                    for (var i4=0; i4 < video_source.sourceDrm.length; i4++) {
+                      drm_source = video_source.sourceDrm[i4]
 
-                    if (cdn_source.contentProtection && Array.isArray(video_source.sourceDrm) && video_source.sourceDrm.length) {
-                      for (var i4=0; i4 < video_source.sourceDrm.length; i4++) {
-                        drm_source = video_source.sourceDrm[i4]
+                      if ((drm_source instanceof Object) && Array.isArray(drm_source.drmConfig) && drm_source.drmConfig.length) {
+                        for (var i5=0; i5 < drm_source.drmConfig.length; i5++) {
+                          drm_config = drm_source.drmConfig[i5]
 
-                        if ((drm_source instanceof Object) && Array.isArray(drm_source.drmConfig) && drm_source.drmConfig.length) {
-                          for (var i5=0; i5 < drm_source.drmConfig.length; i5++) {
-                            drm_config = drm_source.drmConfig[i5]
-
-                            if ((drm_config instanceof Object) && drm_config.type && drm_config.primaryUrl) {
-                              video_data.drm = {
-                                scheme:    drm_config.type.toLowerCase(),
-                                server:    drm_config.primaryUrl,
-                                headers:   null
-                              }
-
-                              callback(video_data)
-                              return
+                          if ((drm_config instanceof Object) && drm_config.type && drm_config.primaryUrl) {
+                            video_data.drm = {
+                              scheme:    drm_config.type.toLowerCase(),
+                              server:    drm_config.primaryUrl,
+                              headers:   null
                             }
+
+                            return {video_data: video_data, cdn_source: cdn_source}
                           }
                         }
                       }
                     }
-
-                    callback(video_data)
-                    return
                   }
+
+                  return {video_data: video_data, cdn_source: cdn_source}
                 }
               }
             }
@@ -428,10 +428,78 @@ var download_live_video_data = function(pid, callback) {
         }
       }
     }
-    catch(e) {}
+  }
+  catch(e) {}
+  return null
+}
+
+var process_live_video_auth = function(json, video_data) {
+  var cdns, cdn, tokens, token
+
+  if (json instanceof Object) {
+    cdns = Object.keys(json)
+
+    for (var i1=0; i1 < cdns.length; i1++) {
+      cdn    = cdns[i1]
+      tokens = json[cdn]
+
+      if (Array.isArray(tokens) && tokens.length) {
+        for (var i2=0; i2 < tokens.length; i2++) {
+          token = tokens[i2]
+
+          if ((token instanceof Object) && token.tokenizedUrl) {
+            video_data.video_url = token.tokenizedUrl
+            return true
+          }
+        }
+      }
+    }
+  }
+  return false
+}
+
+var download_live_video_data = function(pid, callback) {
+  var url, headers, data, xhr_callback_video_data
+
+  url     = 'https://api-leap.nbcsports.com/feeds/assets/' + pid + '?application=NBCNews&format=nbc-player&platform=desktop'
+  headers = null
+  data    = null
+
+  xhr_callback_video_data = function(json_video_data) {
+    var processed_json_video_data, xhr_callback_video_auth
+
+    processed_json_video_data = process_live_video_data(json_video_data)
+    if (!processed_json_video_data) return
+
+    url     = json_video_data.playerVars.cdnTokenEndpoint || 'https://tokens.playmakerservices.com'
+    headers = {
+      "content-type":     "application/json"
+    }
+    data    = {
+      pid:                pid,
+      url:                processed_json_video_data.video_data.video_url,
+      cdn:                processed_json_video_data.cdn_source.cdn || 'akamai',
+      authenticationType: json_video_data.auth.authenticationType  || 'unauth',
+      requestorId:        json_video_data.auth.requestorId         || 'nbcnews',
+      application:        "NBCSports",
+      version:            "v1",
+      platform:           "desktop",
+      inPath:             "false",
+      resourceId:         "",
+      token:              ""
+    }
+
+    xhr_callback_video_auth = function(json_video_auth) {
+      var video_data = processed_json_video_data.video_data
+
+      if (process_live_video_auth(json_video_auth, video_data))
+        callback(video_data)
+    }
+
+    download_json(url, headers, data, xhr_callback_video_auth)
   }
 
-  download_json(url, headers, data, xhr_callback)
+  download_json(url, headers, data, xhr_callback_video_data)
 }
 
 // ----------------------------------------------------------------------------- URL links to tools on Webcast Reloaded website
