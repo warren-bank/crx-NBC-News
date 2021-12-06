@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NBC News
 // @description  Watch videos in external player.
-// @version      1.0.0
+// @version      1.0.1
 // @match        *://nbcnews.com/*
 // @match        *://*.nbcnews.com/*
 // @icon         https://nodeassets.nbcnews.com/cdnassets/projects/ramen/favicon/nbcnews/all-other-sizes-PNG.ico/favicon-32x32.png
@@ -21,7 +21,8 @@
 var user_options = {
   "common": {
     "redirect_show_pages":          true,
-    "sort_newest_first":            true
+    "sort_newest_first":            true,
+    "wrap_history_state_mutations": false
   },
   "webmonkey": {
     "post_intent_redirect_to_url":  "about:blank"
@@ -455,24 +456,26 @@ var process_video_data = function(data) {
       args.push('referUrl')
       args.push(data.referer_url)
     }
-    if (data.drm.scheme) {
-      args.push('drmScheme')
-      args.push(data.drm.scheme)
-    }
-    if (data.drm.server) {
-      args.push('drmUrl')
-      args.push(data.drm.server)
-    }
-    if (data.drm.headers && (typeof data.drm.headers === 'object')) {
-      var drm_header_keys, drm_header_key, drm_header_val
+    if (data.drm instanceof Object) {
+      if (data.drm.scheme) {
+        args.push('drmScheme')
+        args.push(data.drm.scheme)
+      }
+      if (data.drm.server) {
+        args.push('drmUrl')
+        args.push(data.drm.server)
+      }
+      if (data.drm.headers instanceof Object) {
+        var drm_header_keys, drm_header_key, drm_header_val
 
-      drm_header_keys = Object.keys(data.drm.headers)
-      for (var i=0; i < drm_header_keys.length; i++) {
-        drm_header_key = drm_header_keys[i]
-        drm_header_val = data.drm.headers[drm_header_key]
+        drm_header_keys = Object.keys(data.drm.headers)
+        for (var i=0; i < drm_header_keys.length; i++) {
+          drm_header_key = drm_header_keys[i]
+          drm_header_val = data.drm.headers[drm_header_key]
 
-        args.push('drmHeader')
-        args.push(drm_header_key + ': ' + drm_header_val)
+          args.push('drmHeader')
+          args.push(drm_header_key + ': ' + drm_header_val)
+        }
       }
     }
 
@@ -1211,6 +1214,8 @@ var init = function() {
 }
 
 init()
-wrap_history_state_mutations()
+
+if (user_options.common.wrap_history_state_mutations)
+  wrap_history_state_mutations()
 
 // -----------------------------------------------------------------------------
