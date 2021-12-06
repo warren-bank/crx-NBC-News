@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NBC News
 // @description  Watch videos in external player.
-// @version      1.0.1
+// @version      1.0.2
 // @match        *://nbcnews.com/*
 // @match        *://*.nbcnews.com/*
 // @icon         https://nodeassets.nbcnews.com/cdnassets/projects/ramen/favicon/nbcnews/all-other-sizes-PNG.ico/favicon-32x32.png
@@ -20,6 +20,16 @@
 
 var user_options = {
   "common": {
+    "preferred_video_format": {
+      "type":                       "mp4",  // "mp4" or "hls". Choose "mp4" for ExoAirPlayer on Android. Either works with Chromecast.
+      "max_resolution": {
+        "mp4": {
+          "bitrate":                null,
+          "width":                  null,
+          "height":                 720
+        }
+      }
+    },
     "redirect_show_pages":          true,
     "sort_newest_first":            true,
     "wrap_history_state_mutations": false
@@ -135,6 +145,63 @@ var extract_state = function(all_data) {
   extract_show(all_data)
 }
 
+var choose_preferred_video_format = function(video) {
+  var preferred_video_format, mp4_filter, mp4_sort, mp4_videos, mp4_video
+
+  preferred_video_format = user_options.common.preferred_video_format
+
+  if (preferred_video_format.type === 'mp4') {
+    mp4_filter = function(mp4_video) {
+      try {
+        if (preferred_video_format.max_resolution.mp4.bitrate && (mp4_video.bitrate > preferred_video_format.max_resolution.mp4.bitrate))
+          return false
+
+        if (preferred_video_format.max_resolution.mp4.width   && (mp4_video.width   > preferred_video_format.max_resolution.mp4.width))
+          return false
+
+        if (preferred_video_format.max_resolution.mp4.height  && (mp4_video.height  > preferred_video_format.max_resolution.mp4.height))
+          return false
+      }
+      catch(e) {}
+      return true
+    }
+
+    mp4_sort = function(mp4_video_1, mp4_video_2) {
+      var br1 = mp4_video_1.bitrate
+      var br2 = mp4_video_2.bitrate
+
+      // descending order; highest bitrate first
+      return (br1 > br2)
+        ? -1
+        : (br1 < br2)
+          ? 1
+          : 0
+    }
+
+    mp4_videos = video.videos.mp4
+    mp4_videos = mp4_videos.filter(mp4_filter)
+    mp4_videos = mp4_videos.sort(mp4_sort)
+
+    if (mp4_videos.length) {
+      // cherry pick the highest bitrate MP4 that matches the filter criteria
+      mp4_video = mp4_videos[0]
+    }
+    else {
+      // no MP4 videos match the filter criteria
+      // fallback to choosing the lowest available bitrate
+      mp4_video = video.videos.mp4[ video.videos.mp4.length - 1 ]
+    }
+
+    video.video_type = 'video/mp4'
+    video.video_url  = mp4_video.url
+  }
+  else {
+    // default to 'hls'
+    video.video_type = 'application/x-mpegurl'
+    video.video_url  = video.videos.hls
+  }
+}
+
 var convert_raw_video = function(raw_video) {
   var video = null
   var url, title, description, date, duration, mp4_videos, hls_video_url, caption_url
@@ -201,8 +268,7 @@ var convert_raw_video = function(raw_video) {
         }
 
         // normalize data structure by elevating a preferred video format
-        video.video_type = 'application/x-mpegurl'
-        video.video_url  = hls_video_url
+        choose_preferred_video_format(video)
       }
     }
     catch(e) {}
