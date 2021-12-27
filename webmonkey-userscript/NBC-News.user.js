@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NBC News
 // @description  Watch videos in external player.
-// @version      1.0.3
+// @version      1.0.4
 // @match        *://nbcnews.com/*
 // @match        *://*.nbcnews.com/*
 // @icon         https://nodeassets.nbcnews.com/cdnassets/projects/ramen/favicon/nbcnews/all-other-sizes-PNG.ico/favicon-32x32.png
@@ -30,7 +30,8 @@ var user_options = {
         }
       }
     },
-    "redirect_show_pages":          true,
+    "redirect_show_pages":          false,
+    "display_associated_playlist":  false,
     "sort_newest_first":            true,
     "wrap_history_state_mutations": false
   },
@@ -670,11 +671,11 @@ var process_dash_url = function(video_url, caption_url, referer_url) {
 
 // ----------------------------------------------------------------------------- process video
 
-var process_video = function(video_index, callback) {
-  if (!callback)
-    callback = process_video_data
+var process_video = function(video_index) {
+  var video_data = get_video(video_index)
+  if (!video_data) return
 
-  download_video_url_with_authorization(video_index, callback)
+  process_video_data(video_data)
 }
 
 // ----------------------------------------------------------------------------- rewrite DOM to display all available full-episodes for show
@@ -1042,17 +1043,14 @@ var make_show_html = function() {
 var onclick_start_video_button = function(event) {
   cancel_event(event)
 
-  var button, video_index, video_data
+  var button, video_index
 
   button = event.target
 
   video_index = get_video_index(button)
   if (video_index < 0) return
 
-  video_data = get_video(video_index)
-  if (!video_data) return
-
-  process_video_data(video_data)
+  process_video(video_index)
 }
 
 var make_start_video_button = function(video_index) {
@@ -1220,18 +1218,28 @@ var init_page_vod_episode = function(data) {
   var videos
 
   if ((state.page instanceof Object) && (state.page.page === '/video') && (state.page.pageView === 'video')) {
-    if (!videos) {
-      try {
-        videos = data.props.initialState.video.current.associatedVideoPlaylist.videos
+    if (user_options.common.display_associated_playlist) {
+      if (!videos) {
+        try {
+          videos = data.props.initialState.video.current.associatedVideoPlaylist.videos
+        }
+        catch(e) {}
       }
-      catch(e) {}
-    }
 
-    if (!videos) {
-      try {
-        videos = data.props.initialState.video.associatedPlaylists[0].videos
+      if (!videos) {
+        try {
+          videos = data.props.initialState.video.associatedPlaylists[0].videos
+        }
+        catch(e) {}
       }
-      catch(e) {}
+    }
+    else {
+      if (!videos) {
+        try {
+          videos = [data.props.initialState.video.current]
+        }
+        catch(e) {}
+      }
     }
 
     if (videos && Array.isArray(videos) && videos.length) {
@@ -1241,7 +1249,7 @@ var init_page_vod_episode = function(data) {
 
         is_done = true
 
-        if (!user_options.common.sort_newest_first)
+        if (!user_options.common.sort_newest_first && (videos.length > 1))
           videos.reverse()
 
         state.videos = videos
