@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NBC News
 // @description  Watch videos in external player.
-// @version      1.0.4
+// @version      1.0.5
 // @match        *://nbcnews.com/*
 // @match        *://*.nbcnews.com/*
 // @icon         https://nodeassets.nbcnews.com/cdnassets/projects/ramen/favicon/nbcnews/all-other-sizes-PNG.ico/favicon-32x32.png
@@ -21,7 +21,8 @@
 var user_options = {
   "common": {
     "preferred_video_format": {
-      "type":                       "mp4",  // "mp4" or "hls". Choose "mp4" for ExoAirPlayer on Android. Either works with Chromecast.
+      "min_duration_ms":            (1000 * 60 * 15),  // 15 minutes and longer (to exclude short clips).
+      "type":                       "mp4",             // "mp4" or "hls". Choose "mp4" for ExoAirPlayer on Android. Either works with Chromecast.
       "max_resolution": {
         "mp4": {
           "bitrate":                null,
@@ -30,8 +31,9 @@ var user_options = {
         }
       }
     },
-    "redirect_show_pages":          false,
-    "display_associated_playlist":  false,
+    "show_debug_alerts":            false,
+    "redirect_show_pages":          true,
+    "display_associated_playlist":  true,
     "sort_newest_first":            true,
     "wrap_history_state_mutations": false
   },
@@ -52,6 +54,14 @@ var state = {
   "show":            null,
   "videos":          null,
   "did_rewrite_dom": false
+}
+
+// ----------------------------------------------------------------------------- helpers (debugging)
+
+var debug_alert = function(msg) {
+  if (user_options.common.show_debug_alerts) {
+    unsafeWindow.alert(msg)
+  }
 }
 
 // ----------------------------------------------------------------------------- helpers (state)
@@ -110,7 +120,7 @@ var extract_page = function(all_data) {
   var data, page
 
   try {
-    data = all_data.props.initialProps.pageProps
+    data = all_data.props.initialProps.pageProps.initialProps
 
     page = {
       page:     all_data.page,
@@ -284,7 +294,7 @@ var convert_raw_videos = function(raw_videos) {
   if (Array.isArray(raw_videos) && raw_videos.length) {
     videos = raw_videos
     videos = videos.map(convert_raw_video)
-    videos = videos.filter(function(video){return !!video})
+    videos = videos.filter(function(video){return !!video && (video.duration >= user_options.common.preferred_video_format.min_duration_ms)})
   }
 
   return videos
@@ -1204,6 +1214,7 @@ var init_page_live_stream = function() {
     pid = extract_live_stream_pid()
 
   if (pid) {
+    debug_alert('03: page contains a live video stream')
     is_done = true
     download_live_video_data(pid, process_video_data)
   }
@@ -1218,6 +1229,8 @@ var init_page_vod_episode = function(data) {
   var videos
 
   if ((state.page instanceof Object) && (state.page.page === '/video') && (state.page.pageView === 'video')) {
+    debug_alert('04: page contains an on-demand video')
+
     if (user_options.common.display_associated_playlist) {
       if (!videos) {
         try {
@@ -1254,10 +1267,14 @@ var init_page_vod_episode = function(data) {
 
         state.videos = videos
 
-        if (videos.length === 1)
+        if (videos.length === 1) {
+          debug_alert('05: redirecting video stream')
           process_video(0)
-        else
+        }
+        else {
+          debug_alert('05: displaying playlist of all associated episodes')
           rewrite_show_page()
+        }
       }
       catch(e) {
         videos = null
@@ -1276,6 +1293,7 @@ var init_page_vod_episodes_list = function(data) {
   var layouts, layout, package, item, first_episode_url
 
   if ((state.page instanceof Object) && (state.page.page === '/front') && (state.page.pageView === 'front') && !state.page.pageType && (state.page.section.indexOf('-full-episodes') !== -1)) {
+    debug_alert('06: page contains a list of on-demand episodes for series')
     try {
       layouts = data.props.initialState.front.curation.layouts
 
@@ -1315,12 +1333,18 @@ var init_page_vod_episodes_list = function(data) {
       state.videos = videos
       first_episode_url = get_first_episode_url()
 
-      if (videos.length === 1)
+      if (videos.length === 1) {
+        debug_alert('07: playlist contains only one video.. redirecting video stream')
         process_video(0)
-      else if (user_options.common.redirect_show_pages && first_episode_url)
+      }
+      else if (user_options.common.redirect_show_pages && first_episode_url) {
+        debug_alert('07: redirecting to page for first episode in playlist')
         redirect_to_url(first_episode_url)
-      else
+      }
+      else {
+        debug_alert('07: displaying playlist')
         rewrite_show_page()
+      }
     }
     catch(e) {
       videos = []
@@ -1347,10 +1371,18 @@ var init_page_vod = function(data) {
 // -------------------------------------
 
 var init = function() {
+  debug_alert('01: begin init')
+
   var data = extract_vod_dataset()
 
-  if (data)
+  if (data) {
     extract_state(data)
+    debug_alert('02: successfully extracted data from script tag #__NEXT_DATA__')
+    debug_alert('state: ' + JSON.stringify(state))
+  }
+  else {
+    debug_alert('02: failed to extract data from script tag #__NEXT_DATA__')
+  }
 
   init_page_live_stream() || init_page_vod(data)
 }
