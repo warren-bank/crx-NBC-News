@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NBC News
 // @description  Watch videos in external player.
-// @version      1.0.5
+// @version      1.0.6
 // @match        *://nbcnews.com/*
 // @match        *://*.nbcnews.com/*
 // @icon         https://nodeassets.nbcnews.com/cdnassets/projects/ramen/favicon/nbcnews/all-other-sizes-PNG.ico/favicon-32x32.png
@@ -22,7 +22,7 @@ var user_options = {
   "common": {
     "preferred_video_format": {
       "min_duration_ms":            (1000 * 60 * 15),  // 15 minutes and longer (to exclude short clips).
-      "type":                       "mp4",             // "mp4" or "hls". Choose "mp4" for ExoAirPlayer on Android. Either works with Chromecast.
+      "type":                       "hls",             // "hls" only. "mp4" is not currently supported.
       "max_resolution": {
         "mp4": {
           "bitrate":                null,
@@ -242,20 +242,14 @@ var convert_raw_video = function(raw_video) {
             duration = asset.assetDuration * 1000
           }
 
-          if (asset.publicUrl && (asset.format === 'MPEG4')) {
+          if (asset.publicUrl && (asset.assetType === 'EMP') && (asset.format === 'M3U')) {
             if (asset.publicUrl.substring(0,5).toLowerCase() === 'http:') {
               asset.publicUrl = 'https:' + asset.publicUrl.substring(5, asset.publicUrl.length)
             }
 
-            mp4_videos.push({
-              bitrate: asset.bitrate || -1,
-              width:   asset.width   || -1,
-              height:  asset.height  || -1,
-              url:     asset.publicUrl + '&format=redirect&Tracking=true&Embedded=true&formats=MPEG4' + '#video.mp4'
-            })
-
             if (!hls_video_url) {
-              hls_video_url = asset.publicUrl + '&format=redirect&manifest=m3u&format=redirect&Tracking=true&Embedded=true&formats=MPEG4' + '#video.m3u8'
+              hls_video_url = asset.publicUrl + '#video.m3u8'
+              break
             }
           }
         }

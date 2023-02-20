@@ -1,0 +1,32 @@
+--------------------------------------------------------------------------------
+
+comparison of output on various types of pages throughout site:
+  {
+    var data = JSON.parse( window.document.querySelector('script#__NEXT_DATA__').innerText )
+    var page = {
+      page:     data.page,
+      pageView: data.props.initialProps.pageProps.initialProps.pageView,
+      pageType: data.props.initialProps.pageProps.initialProps.pageType
+    }
+
+    console.log(page)
+  }
+
+----------------------------------------
+
+https://www.nbcnews.com/
+  {page: "/front", pageView: "front", pageType: "cover"}
+
+https://www.nbcnews.com/now
+  {page: "/videoLive", pageView: "front", pageType: undefined}
+
+https://www.nbcnews.com/meet-the-press/
+  {page: "/front", pageView: "front", pageType: "showPage"}
+
+https://www.nbcnews.com/meet-the-press-full-episodes
+  {page: "/front", pageView: "front", pageType: null}
+
+https://www.nbcnews.com/meet-the-press/video/feb-19-sec-antony-blinken-and-fmr-gov-larry-hogan-163646533562
+  {page: "/video", pageView: "video", pageType: undefined}
+
+--------------------------------------------------------------------------------

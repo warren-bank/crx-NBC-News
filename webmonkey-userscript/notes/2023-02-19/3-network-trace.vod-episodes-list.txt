@@ -1,0 +1,221 @@
+-------------------------------------------------------------------------------- vod (episodes list):
+
+https://www.nbcnews.com/meet-the-press-full-episodes
+
+--------------------------------------------------------------------------------
+
+sample filter (all available episodes):
+=======================================
+{
+  // step 1: unique to this type of page
+
+  var data    = JSON.parse( window.document.querySelector('script#__NEXT_DATA__').innerText )
+  var layouts = data.props.initialState.front.curation.layouts
+  var videos  = []
+  var layout, package, item
+
+  for (var i1=0; i1 < layouts.length; i1++) {
+    layout = layouts[i1]
+
+    if ((layout instanceof Object) && Array.isArray(layout.packages) && layout.packages.length) {
+      for (var i2=0; i2 < layout.packages.length; i2++) {
+        package = layout.packages[i2]
+
+        if ((package instanceof Object) && Array.isArray(package.items) && package.items.length) {
+          for (var i3=0; i3 < package.items.length; i3++) {
+            item = package.items[i3]
+
+            if ((item instanceof Object) && (item.type === 'video') && (item.item instanceof Object)) {
+              videos.push(item.item)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // step 2: preprocess list of videos
+  //   note: identical data structure mapping as other types of pages (ex: episode)
+
+  // filter invalid list items
+  videos = videos.filter(function(video){
+    return (
+         (video.videoType === 'broadcast')
+      && ('object' === typeof video.url)
+      && ('object' === typeof video.headline)
+      && ('object' === typeof video.description)
+      && ('object' === typeof video.closedCaptioning)
+      && (Array.isArray(video.videoAssets) && video.videoAssets.length)
+    )
+  })
+
+  // preprocess list of videos
+  videos = videos.map(function(video){
+    var videoAsset = video.videoAssets.find(function(asset){
+      return (
+           (asset.assetType === 'EMP')
+        && (asset.format === 'M3U')
+        && (asset.publicUrl)
+      )
+    })
+
+    return (!videoAsset)
+      ? null
+      : {
+        url:         video.url.canonical,
+        title:       video.headline.primary,
+        description: video.description.primary,
+        videos:      {
+          hls:       videoAsset.publicUrl + '#video.m3u8'
+        },
+        duration:    videoAsset.assetDuration * 1000,
+        date:        (new Date(video.datePublished)).toLocaleDateString(),
+        caption_url: video.closedCaptioning.webvtt || video.closedCaptioning.srt || video.closedCaptioning.smptett || ''
+      }
+  })
+
+  console.log(videos.length)
+  console.log(JSON.stringify(videos, null, 2))
+}
+
+result:
+=======
+9
+
+[
+  {
+    "url": "https://www.nbcnews.com/meet-the-press/video/feb-19-sec-antony-blinken-and-fmr-gov-larry-hogan-163646533562",
+    "title": "Feb. 19 — Sec. Antony Blinken and fmr. Gov. Larry Hogan",
+    "description": "Secretary of State Antony Blinken joins Meet the Press to discuss China's surveillance balloon and U.S. support for the war in Ukraine ahead of the one-year anniversary of the Russian invasion. Former Gov. Larry Hogan (R-Md.) exclusively joins to discuss the 2024 presidential election and a potential bid following former South Carolina GOP Gov. Nikki Haley's entrance to the race.",
+    "videos": {
+      "hls": "http://link.theplatform.com/s/rksNhC/flXCcqIAaspE#video.m3u8"
+    },
+    "duration": 2846104,
+    "date": "2/19/2023",
+    "caption_url": "https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1676820068684_mtp_netcast_230219.vtt"
+  },
+  {
+    "url": "https://www.nbcnews.com/meet-the-press/video/mtp-now-feb-17-new-uncertainty-on-artificial-intelligence-trump-and-desantis-outpace-2024-field-163593285549",
+    "title": "MTP NOW Feb. 17 — New uncertainty on artificial intelligence; Trump and DeSantis outpace 2024 field",
+    "description": "Congressional leaders look to regulate artificial intelligence. Former President Trump and Florida Governor Ron DeSantis maintain their lead in the Republican presidential field.",
+    "videos": {
+      "hls": "http://link.theplatform.com/s/rksNhC/RctGCjRAaH_E#video.m3u8"
+    },
+    "duration": 3003096,
+    "date": "2/17/2023",
+    "caption_url": "https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1676673432843_now_mtp_netcast_230217.vtt"
+  },
+  {
+    "url": "https://www.nbcnews.com/meet-the-press/video/mtp-now-feb-16-biden-addresses-unidentified-objects-georgia-grand-jury-report-163514949837",
+    "title": "MTP NOW Feb. 16 — Biden addresses unidentified objects; Georgia grand jury report",
+    "description": "President Biden defended his administration's handling of the high-altitude objects shot down over North America airspace, with Beijing responding by issuing a new warning, accusing the U.S. of escalating the dispute between the two countries. A special grand jury report on the Donald Trump election probe in Fulton County, Georgia, says the grand jurors believe some witnesses may have lied under oath.",
+    "videos": {
+      "hls": "http://link.theplatform.com/s/rksNhC/v2JZrWcvwQ2W#video.m3u8"
+    },
+    "duration": 3063290,
+    "date": "2/16/2023",
+    "caption_url": "https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1676586906411_now_mtp_netcast_230216.vtt"
+  },
+  {
+    "url": "https://www.nbcnews.com/meet-the-press/video/mtp-now-feb-15-defense-sec-lloyd-austin-nikki-haley-s-presidential-bid-163438661914",
+    "title": "MTP NOW Feb. 15 — Defense Sec. Lloyd Austin; Nikki Haley’s presidential bid",
+    "description": "Defense Secretary Lloyd Austin says he doesn't think the Chinese spy balloon and other objects downed over American airspace were an intelligence failure in an excerpt from an exclusive interview with NBC News Pentagon Correspondent Courtney Kube. Fmr. GOP South Carolina Governor Nikki Haley kicks off her presidential campaign without any mention of former President Trump.",
+    "videos": {
+      "hls": "http://link.theplatform.com/s/rksNhC/s0wVKwlH06kS#video.m3u8"
+    },
+    "duration": 3005632,
+    "date": "2/15/2023",
+    "caption_url": "https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1676501054180_now_mtp_netcast_230215.vtt"
+  },
+  {
+    "url": "https://www.nbcnews.com/meet-the-press/video/mtp-now-feb-14-rep-debbie-dingell-michigan-state-shooting-nikki-haley-enters-2024-race-163365445982",
+    "title": "MTP NOW Feb. 14 — Rep. Debbie Dingell; Michigan State shooting; Nikki Haley enters 2024 race",
+    "description": "Rep. Debbie Dingell (D-Mich.) speaks to the continued frustration over the lack of gun safety legislation after another mass shooting. President Biden stays silent on unidentified objects as senators get briefed.",
+    "videos": {
+      "hls": "http://link.theplatform.com/s/rksNhC/1vthDYZFKFOr#video.m3u8"
+    },
+    "duration": 2979306,
+    "date": "2/14/2023",
+    "caption_url": "https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1676413221716_now_mtp_netcast_230214.vtt"
+  },
+  {
+    "url": "https://www.nbcnews.com/meet-the-press/video/mtp-now-feb-13-john-bolton-more-unidentified-objects-found-in-u-s-airspace-163285573759",
+    "title": "MTP NOW Feb. 13 — John Bolton; More unidentified objects found in U.S. airspace",
+    "description": "Former National Security Adviser John Bolton joins Meet the Press NOW to discuss the four high-altitude objects, classified documents and the 2024 election. Senators are set to be briefed on the unidentified high-altitude objects Tuesday as bipartisan frustration with the Biden administration over the balloons mounts.",
+    "videos": {
+      "hls": "http://link.theplatform.com/s/rksNhC/Zvvb__ZbBzPI#video.m3u8"
+    },
+    "duration": 2995589,
+    "date": "2/13/2023",
+    "caption_url": "https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1676327359640_now_mtp_netcast_230213.vtt"
+  },
+  {
+    "url": "https://www.nbcnews.com/meet-the-press/video/feb-12-rep-jim-himes-govs-phil-murphy-and-spencer-cox-163205701661",
+    "title": "Feb. 12 — Rep. Jim Himes, Govs. Phil Murphy and Spencer Cox",
+    "description": "Rep. Jim Himes (D-Conn.), ranking member of the House Intel. Committee, reacts to the Biden administration's handling of the recent string of high-altitude objects found over the U.S. and Canada in an exclusive interview. Gov. Phil Murphy (D-N.J.) and Gov. Spencer Cox (R-Utah) discuss the ongoing culture wars in an exclusive joint interview. Mark Pomerantz, fmr. special assistant District Attorney, discusses his new book about ongoing investigations into fmr. President Trump.",
+    "videos": {
+      "hls": "http://link.theplatform.com/s/rksNhC/VZ6AbAKlhoHn#video.m3u8"
+    },
+    "duration": 2850008,
+    "date": "2/12/2023",
+    "caption_url": "https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1676216042043_mtp_netcast_230212.vtt"
+  },
+  {
+    "url": "https://www.nbcnews.com/meet-the-press/video/mtp-now-feb-10-gov-jared-polis-second-object-shot-down-over-u-s-entitlement-fight-163143749993",
+    "title": "MTP NOW Feb. 10 — Gov. Jared Polis; Second 'object' shot down over U.S.; Entitlement fight",
+    "description": "A second “object” was shot down over Alaskan airspace. Republicans scramble to define their position on entitlement following President Biden’s State of the Union address. Gov. Polis says he would support Biden for a potential presidential campaign.",
+    "videos": {
+      "hls": "http://link.theplatform.com/s/rksNhC/aGeQfDqpLWqP#video.m3u8"
+    },
+    "duration": 2986446,
+    "date": "2/10/2023",
+    "caption_url": "https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1676068273348_now_mtp_netcast_230210.vtt"
+  },
+  {
+    "url": "https://www.nbcnews.com/meet-the-press/video/mtp-now-feb-9-rep-gregory-meeks-chinese-spy-balloon-briefing-163028549628",
+    "title": "MTP NOW Feb. 9 — Rep. Gregory Meeks; Chinese spy balloon briefing",
+    "description": "After numerous requests to the White House, lawmakers in both chambers received classified briefings Thursday on China's massive balloon surveillance operation. Rep. Gregory Meeks (D-N.Y.), ranking member of the House Foreign Affairs Committee, discussed the lessons he learned during the briefing.",
+    "videos": {
+      "hls": "http://link.theplatform.com/s/rksNhC/gexXxYgCdyeA#video.m3u8"
+    },
+    "duration": 2980073,
+    "date": "2/9/2023",
+    "caption_url": "https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1675981195948_now_mtp_netcast_230209.vtt"
+  }
+]
+
+--------------------------------------------------------------------------------
+
+observations:
+=============
+  * disappointing..
+    - pages for an individual episode contain a longer list of available episodes
+      than pages having the singular purpose to list available episodes
+  * example:
+    - individual episode:
+        https://www.nbcnews.com/meet-the-press/video/feb-19-sec-antony-blinken-and-fmr-gov-larry-hogan-163646533562
+      lists:
+        20 available episodes (w/ a complete dataset, including video URLs)
+    - list of episodes:
+        https://www.nbcnews.com/meet-the-press-full-episodes
+      lists:
+        09 available episodes (w/ a complete dataset, including video URLs)
+
+considerations:
+===============
+  * when processing pages having the singular purpose to list available episodes,
+    I'm tempted to:
+    - cherry pick the URL for the first available episode
+    - download HTML w/ XHR
+    - use regex to extract content of <script> tag
+    - parse JSON
+    - process JSON to obtain a list of available episodes
+    - compare lengths of the two lists (current page vs. XHR) and use whichever is longer
+  * better yet, a simpler option is to:
+    - always redirect to the URL for the first available episode
+    - always show a list of all available episodes on pages intended to view a particular episode,
+      which makes all pages for all episodes in a particular series render identically..
+    - to distinguish the episode currently loaded,
+      the corresponding list item could be identified, and a css class added to it
+
+--------------------------------------------------------------------------------
