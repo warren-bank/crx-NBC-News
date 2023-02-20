@@ -45682,6 +45682,13 @@ http://link.theplatform.com/s/rksNhC/ItsuUhrP1yT5
 	<textstream src="https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1676820068684_mtp_netcast_230219.vtt" type="text/vtt" closedCaptions="true"/>
 	<textstream src="https://nbcnewsdigital-static.nbcuni.com/media/captions/NBC_News_Digital/2023/02/1676820068684_mtp_netcast_230219.srt" type="text/srt" closedCaptions="true"/>
 
+----------------------------------------
+
+curl -I "http://link.theplatform.com/s/rksNhC/ItsuUhrP1yT5?format=redirect"
+  HTTP/1.1 302 Found
+  Access-Control-Allow-Origin: *
+  Location: https://prodamdnewsencoding.akamaized.net/NBC_News_Digital/nbcnews/video/2023/02/1676820068684_mtp_netcast_230219_6.mp4
+
 --------------------------------------------------------------------------------
 
 sample filter (all available episodes):

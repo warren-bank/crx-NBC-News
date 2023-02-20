@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NBC News
 // @description  Watch videos in external player.
-// @version      1.0.6
+// @version      1.0.7
 // @match        *://nbcnews.com/*
 // @match        *://*.nbcnews.com/*
 // @icon         https://nodeassets.nbcnews.com/cdnassets/projects/ramen/favicon/nbcnews/all-other-sizes-PNG.ico/favicon-32x32.png
@@ -22,7 +22,7 @@ var user_options = {
   "common": {
     "preferred_video_format": {
       "min_duration_ms":            (1000 * 60 * 15),  // 15 minutes and longer (to exclude short clips).
-      "type":                       "hls",             // "hls" only. "mp4" is not currently supported.
+      "type":                       "hls",             // "hls" or "mp4".
       "max_resolution": {
         "mp4": {
           "bitrate":                null,
@@ -157,11 +157,28 @@ var extract_state = function(all_data) {
 }
 
 var choose_preferred_video_format = function(video) {
-  var preferred_video_format, mp4_filter, mp4_sort, mp4_videos, mp4_video
+  var preferred_video_format, video_format_type, mp4_filter, mp4_sort, mp4_videos, mp4_video
 
   preferred_video_format = user_options.common.preferred_video_format
+  video_format_type      = preferred_video_format.type
 
-  if (preferred_video_format.type === 'mp4') {
+  switch(video_format_type) {
+    case 'mp4':
+      if (!video.videos.mp4.length) {
+        video_format_type = video.videos.hls ? 'hls' : null
+      }
+      break
+    case 'hls':
+      if (!video.videos.hls) {
+        video_format_type = video.videos.mp4.length ? 'mp4' : null
+      }
+      break
+    default:
+      video_format_type = video.videos.hls ? 'hls' : (video.videos.mp4.length ? 'mp4' : null)
+      break
+  }
+
+  if (video_format_type === 'mp4') {
     mp4_filter = function(mp4_video) {
       try {
         if (preferred_video_format.max_resolution.mp4.bitrate && (mp4_video.bitrate > preferred_video_format.max_resolution.mp4.bitrate))
@@ -206,8 +223,7 @@ var choose_preferred_video_format = function(video) {
     video.video_type = 'video/mp4'
     video.video_url  = mp4_video.url
   }
-  else {
-    // default to 'hls'
+  else if (video_format_type === 'hls') {
     video.video_type = 'application/x-mpegurl'
     video.video_url  = video.videos.hls
   }
@@ -238,18 +254,26 @@ var convert_raw_video = function(raw_video) {
         for (var i=0; i < raw_video.videoAssets.length; i++) {
           asset = raw_video.videoAssets[i]
 
-          if (!duration && asset.assetDuration) {
-            duration = asset.assetDuration * 1000
-          }
+          if ((asset instanceof Object) && asset.publicUrl) {
+            if (!duration && asset.assetDuration) {
+              duration = asset.assetDuration * 1000
+            }
 
-          if (asset.publicUrl && (asset.assetType === 'EMP') && (asset.format === 'M3U')) {
             if (asset.publicUrl.substring(0,5).toLowerCase() === 'http:') {
               asset.publicUrl = 'https:' + asset.publicUrl.substring(5, asset.publicUrl.length)
             }
 
-            if (!hls_video_url) {
+            if ((asset.assetType === 'akamaiMp4') && (asset.format === 'MPEG4')) {
+              mp4_videos.push({
+                bitrate: asset.bitrate || -1,
+                width:   asset.width   || -1,
+                height:  asset.height  || -1,
+                url:     asset.publicUrl + '?format=redirect' + '#video.mp4'
+              })
+            }
+
+            if ((asset.assetType === 'EMP') && (asset.format === 'M3U') && !hls_video_url) {
               hls_video_url = asset.publicUrl + '#video.m3u8'
-              break
             }
           }
         }
@@ -258,7 +282,7 @@ var convert_raw_video = function(raw_video) {
       if (raw_video.closedCaptioning instanceof Object)
         caption_url = raw_video.closedCaptioning.webvtt || raw_video.closedCaptioning.srt || raw_video.closedCaptioning.smptett
 
-      if (hls_video_url) {
+      if (mp4_videos.length || hls_video_url) {
         video = {
           url:         url         || '',
           title:       title       || '',
@@ -288,7 +312,7 @@ var convert_raw_videos = function(raw_videos) {
   if (Array.isArray(raw_videos) && raw_videos.length) {
     videos = raw_videos
     videos = videos.map(convert_raw_video)
-    videos = videos.filter(function(video){return !!video && (video.duration >= user_options.common.preferred_video_format.min_duration_ms)})
+    videos = videos.filter(function(video){return !!video && video.video_type && video.video_url && (video.duration >= user_options.common.preferred_video_format.min_duration_ms)})
   }
 
   return videos
